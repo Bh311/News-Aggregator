@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:25px;background:#fafafa;color:#222;}
+        .article-image{
+            width:100%; max-height:420px; object-fit:cover;
+            border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,0.12);
+            margin-bottom:18px;
+        }
+        em{color:#555;}
+        hr{margin:25px 0;}
+    </style>
+</head>
+<body>
+    {% if image_url %}
+      <img src="{{ image_url }}" alt="Article image" class="article-image">
+    {% endif %}
+
+    <h1>{{ title }}</h1>
+    <p><em>{{ summary }}</em></p>
+    <hr>
+    <div style="line-height:1.6;">{{ text|safe }}</div>
+</body>
+</html>

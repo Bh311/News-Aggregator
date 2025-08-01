@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emotion Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f9f9f9;
+            color: #222;
+            padding: 40px 20px;
+            margin: 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            margin: 20px 0 10px;
+            font-size: 20px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .chip {
+            display: inline-block;
+            background: #e3e3e3;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 999px;
+            margin: 6px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .chip:hover {
+            background: #d0d0d0;
+        }
+
+        .chart-container {
+            width: 320px;
+            height: 320px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .wide-chart {
+            width: 90%;
+            max-width: 700px;
+            height: 300px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            font-size: 16px;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #111;
+            color: #eee;
+        }
+
+        body.dark-mode .chip {
+            background: #333;
+            color: #eee;
+        }
+
+        body.dark-mode .chip:hover {
+            background: #444;
+        }
+
+        body.dark-mode .back-link {
+            color: #66bfff;
+        }
+
+        #toggleDarkMode {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        body.dark-mode #toggleDarkMode {
+            background: #444;
+            color: #eee;
+        }
+    </style>
+</head>
+<body>
+
+<a href="/digest" class="back-link">⬅️ Back to Digest</a>
+<button id="toggleDarkMode">🌓</button>
+
+<h1>📊 Emotion Analytics</h1>
+
+<div class="section">
+    <h3>🧠 Your Emotion History</h3>
+    {% if emotion_history %}
+        {% for e in emotion_history %}
+            <span class="chip">{{ e }}</span>
+        {% endfor %}
+    {% else %}
+        <p>No emotion history found.</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h3>📈 Emotion Distribution in Articles</h3>
+    {% if emotion_counts %}
+        <div class="chart-container">
+            <canvas id="emotionChart"></canvas>
+        </div>
+    {% else %}
+        <p>No emotion data found yet.</p>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h3>📉 Session Emotion Trend</h3>
+    {% if emotion_history %}
+        <div class="wide-chart">
+            <canvas id="sessionChart"></canvas>
+        </div>
+    {% else %}
+        <p>No session emotion data found.</p>
+    {% endif %}
+</div>
+
+<script>
+    // Parse data from template context
+    const emotionData = {{ emotion_counts | tojson }};
+    const sessionEmotions = {{ emotion_history | tojson }};
+
+    let emotionChart;
+    let sessionChart;
+
+    function createEmotionChart() {
+        const ctx = document.getElementById('emotionChart').getContext('2d');
+        if (emotionChart) emotionChart.destroy();
+
+        const darkMode = document.body.classList.contains('dark-mode');
+        const labelColor = darkMode ? '#eee' : '#333';
+
+        emotionChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(emotionData),
+                datasets: [{
+                    data: Object.values(emotionData),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56',
+                        '#9966FF', '#4BC0C0', '#17a2b8'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: labelColor,
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        bodyColor: labelColor,
+                        titleColor: labelColor
+                    }
+                }
+            }
+        });
+    }
+
+    function createSessionChart() {
+        const ctx = document.getElementById('sessionChart').getContext('2d');
+        if (sessionChart) sessionChart.destroy();
+
+        const darkMode = document.body.classList.contains('dark-mode');
+        const labelColor = darkMode ? '#eee' : '#333';
+
+        const emotionMap = {
+            "neutral": 0,
+            "joy": 1,
+            "surprise": 2,
+            "sadness": 3,
+            "anger": 4,
+            "fear": 5,
+            "disgust": 6,
+            "unknown": 7
+        };
+
+        const emotionLabels = Object.keys(emotionMap);
+        const numericData = sessionEmotions.map(e => emotionMap[e] ?? 7);
+        const labels = numericData.map((_, i) => `#${i + 1}`);
+
+        sessionChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Detected Emotion',
+                    data: numericData,
+                    borderColor: '#36A2EB',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: Object.keys(emotionMap).length - 1,
+                        ticks: {
+                            callback: val => emotionLabels[val] || '',
+                            stepSize: 1,
+                            color: labelColor,
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: darkMode ? '#444' : '#ccc'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: labelColor,
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            color: darkMode ? '#444' : '#ccc'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: labelColor,
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        bodyColor: labelColor,
+                        titleColor: labelColor
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize charts on page load
+    createEmotionChart();
+    createSessionChart();
+
+    // Dark mode toggle with persistence and chart re-creation
+    const toggleBtn = document.getElementById('toggleDarkMode');
+    if (localStorage.getItem('dark-mode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+
+    toggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('dark-mode', document.body.classList.contains('dark-mode'));
+
+        // Recreate charts with updated colors without reloading
+        createEmotionChart();
+        createSessionChart();
+    });
+</script>
+
+</body>
+</html>

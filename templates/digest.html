@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI News Digest – {{ date }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f4f4;
+            color: #000;
+            padding: 20px;
+            margin: 0;
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        h2 {
+            margin: 10px 0 6px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #007bff;
+            margin-right: 15px;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 8px 16px;
+            background-color:rgb(107, 130, 155);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #dark-mode-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .card {
+            background: #fff;
+            padding: 15px;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            max-width: 700px;
+            border-left: 5px solid transparent;
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeSlideIn 0.6s ease forwards;
+            animation-delay: calc(var(--i) * 0.08s);
+        }
+
+        .highlight {
+            border-left-color: #ff6600;
+            background:rgb(232, 208, 148);
+        }
+
+        @keyframes fadeSlideIn {
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .card-image {
+            width: 100%;
+            max-height: 220px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .badge-happy, .badge-joy       { background: #28a745; }
+        .badge-sadness                 { background: #6c757d; }
+        .badge-anger                   { background: #dc3545; }
+        .badge-fear                    { background: #6f42c1; }
+        .badge-surprise                { background: #fd7e14; }
+        .badge-neutral, .badge-unknown { background: #17a2b8; }
+
+        .divider {
+            border-top: 2px dashed #aaa;
+            margin: 40px 0 20px;
+            font-style: italic;
+            color: #666;
+            text-align: center;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #111;
+            color: #eee;
+        }
+
+        .card.dark-mode {
+            background-color: #1e1e1e;
+            border-color: #333;
+        }
+
+        .card.dark-mode h2,
+        .card.dark-mode p,
+        .card.dark-mode a,
+        .card.dark-mode strong {
+            color: #ddd;
+        }
+
+        .highlight.dark-mode {
+            background-color: #1e1e1e;
+            border-left-color:rgb(134, 119, 100);
+        }
+
+        /* Highlighted text in dark mode - red */
+        .card.highlight.dark-mode h2,
+        .card.highlight.dark-mode p,
+        .card.highlight.dark-mode a,
+        .card.highlight.dark-mode strong {
+            color: red !important;
+        }
+
+        .badge-neutral.dark-mode,
+        .badge-unknown.dark-mode {
+            background-color: #138ea0;
+        }
+
+        a.button-link {
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button id="dark-mode-toggle">🌓</button>
+
+    <h1>📰 AI News – {{ date }}</h1>
+
+    <div style="text-align:center; margin-bottom: 20px;">
+        <a href="{{ url_for('analytics') }}">📊 View </a>
+        <a href="{{ url_for('download_audio') }}" class="button-link">
+            <button>🎧 Download Audio Digest</button>
+        </a>
+    </div>
+
+    {% if emotion %}
+      <h3 style="text-align:center;">Showing news prioritised by your emotion:
+        <span style="color:darkorange;">{{ emotion }}</span>
+      </h3>
+    {% endif %}
+
+    {% set emoji_map = {
+         'happy':'😊','joy':'😄','sadness':'😢','anger':'😠',
+         'fear':'😨','surprise':'😲','neutral':'😐','unknown':'❓'
+    } %}
+
+    {% for item in matched %}
+      {% set badge_class = 'badge-' ~ item.emotion if item.emotion in emoji_map else 'badge-unknown' %}
+      <div class="card highlight {% if body_class == 'dark-mode' %}dark-mode{% endif %}" style="--i:{{ loop.index }}">
+        <img src="{{ item.image or '/static/images/default.jpg' }}" class="card-image" alt="thumbnail">
+        <h2>{{ item.title }}</h2>
+        <p id="summary-matched-{{ loop.index }}">{{ item.summary }}</p>
+        <button onclick="readSummary('summary-matched-{{ loop.index }}')">🔊 Play</button>
+        <p><strong>Source:</strong> {{ item.source }} |
+          <a href="{{ item.link }}" target="_blank">Read more</a>
+        </p>
+        <span class="badge {{ badge_class }} {{ 'dark-mode' if body_class == 'dark-mode' }}">
+          {{ emoji_map.get(item.emotion, '❓') }} {{ item.emotion|capitalize }}
+        </span>
+      </div>
+    {% endfor %}
+
+    {% if unmatched %}
+      <div class="divider">Other news articles (different emotions)</div>
+    {% endif %}
+
+    {% for item in unmatched %}
+      {% set badge_class = 'badge-' ~ item.emotion if item.emotion in emoji_map else 'badge-unknown' %}
+      <div class="card {% if body_class == 'dark-mode' %}dark-mode{% endif %}" style="--i:{{ loop.index }}">
+        <img src="{{ item.image or '/static/images/default.jpg' }}" class="card-image" alt="thumbnail">
+        <h2>{{ item.title }}</h2>
+        <p id="summary-unmatched-{{ loop.index }}">{{ item.summary }}</p>
+        <button onclick="readSummary('summary-unmatched-{{ loop.index }}')">🔊 Play</button>
+        <p><strong>Source:</strong> {{ item.source }} |
+          <a href="{{ item.link }}" target="_blank">Read more</a>
+        </p>
+        <span class="badge {{ badge_class }} {{ 'dark-mode' if body_class == 'dark-mode' }}">
+          {{ emoji_map.get(item.emotion, '❓') }} {{ item.emotion|capitalize }}
+        </span>
+      </div>
+    {% endfor %}
+
+    <script>
+      document.getElementById('dark-mode-toggle').onclick = () => {
+        document.body.classList.toggle('dark-mode');
+        document.querySelectorAll('.card').forEach(c => c.classList.toggle('dark-mode'));
+        document.querySelectorAll('.highlight').forEach(c => c.classList.toggle('dark-mode'));
+        document.querySelectorAll('.badge').forEach(b => b.classList.toggle('dark-mode'));
+      };
+
+      function readSummary(id) {
+        const text = document.getElementById(id).innerText;
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'en-US';
+        msg.pitch = 1;
+        msg.rate = 1;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(msg);
+      }
+    </script>
+</body>
+</html>
